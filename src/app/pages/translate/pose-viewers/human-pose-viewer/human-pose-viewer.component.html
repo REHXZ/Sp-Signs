@@ -1,0 +1,21 @@
+<ng-container *transloco="let t; read: 'translate.spoken-to-signed.progress-bars.human-pose-viewer'">
+  @if (modelReady && !ready) {
+  <ion-progress-bar [value]="progress" [attr.aria-label]="t('generating')"></ion-progress-bar>
+  }
+
+  <pose-viewer
+    #poseViewer
+    [attr.src]="src"
+    [attr.autoplay]="false"
+    [attr.loop]="false"
+    [attr.background]="appearance$ | async"
+    thickness="1"
+    width="256px"
+    height="256px"></pose-viewer>
+
+  @if (!modelReady) {
+  <ion-spinner [attr.aria-label]="t('loading')" color="primary"></ion-spinner>
+  }
+
+  <canvas #canvas width="768" height="768"></canvas>
+</ng-container>

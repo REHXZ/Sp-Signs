@@ -1,0 +1,23 @@
+<div class="container">
+  <h2>Frequently Asked Questions</h2>
+
+  <ion-accordion-group>
+    @for (question of questions; track question) {
+    <ion-accordion>
+      <ion-item slot="header">
+        <ion-label>{{ question.question }}</ion-label>
+      </ion-item>
+      <div class="ion-padding" slot="content">
+        <p>{{ question.answer }}</p>
+        @if (question.steps) {
+        <ol>
+          @for (step of question.steps; track step) {
+          <li>{{ step }}</li>
+          }
+        </ol>
+        }
+      </div>
+    </ion-accordion>
+    }
+  </ion-accordion-group>
+</div>

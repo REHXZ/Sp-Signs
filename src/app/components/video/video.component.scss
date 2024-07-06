@@ -1,0 +1,70 @@
+:host {
+  background: #202124;
+  display: flex;
+  position: relative;
+
+  color: white;
+  align-items: center;
+  overflow: hidden;
+
+  min-height: 216px;
+}
+
+p {
+  margin: auto;
+  text-align: center;
+  font-size: 36px;
+  line-height: 48px;
+}
+
+#video-container {
+  height: 100%;
+  overflow: hidden;
+
+  video {
+    display: none;
+  }
+
+  canvas {
+    transform-origin: top left;
+  }
+}
+
+/* Transform origin does not support "start". For RTL languages, we need to flip the transform origin. */
+::ng-deep html[dir='rtl'] #video-container canvas {
+  transform-origin: top right !important;
+}
+
+app-video-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+}
+
+app-video-help {
+  position: absolute;
+
+  top: 16px;
+  right: 16px;
+}
+
+.video-overlay {
+  background: rgba(0, 0, 0, 0.2);
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon {
+    font-size: 4em;
+  }
+
+  &:hover {
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.4);
+  }
+}
