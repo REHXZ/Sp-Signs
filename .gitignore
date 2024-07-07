@@ -69,3 +69,6 @@ src/assets/promotional/about/android/*.png
 
 package-lock.json
 bun.lockb
+
+# Local Netlify folder
+.netlify

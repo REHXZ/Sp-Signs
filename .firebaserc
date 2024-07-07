@@ -1,12 +1,12 @@
 {
   "projects": {
-    "default": "sign-mt"
+    "default": "spsigns-c2134"
   },
   "targets": {
-    "sign-mt": {
+    "spsigns-c2134": {
       "hosting": {
         "translate": [
-          "translate-sign-mt"
+          "translate-spsigns-c2134"
         ]
       }
     }
