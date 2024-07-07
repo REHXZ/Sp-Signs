@@ -7,15 +7,25 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const upload = multer({dest: 'uploads/'});
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + Date.now() + ext);
+  },
+});
+
+const upload = multer({storage: storage});
 
 ffmpeg.setFfmpegPath('ffmpeg/bin/ffmpeg.exe'); // Adjust the path as necessary for your installation
 
-app.use(
-  cors({
-    origin: 'http://localhost:4200', // Allow requests from this origin
-  })
-);
+app.use(cors({origin: 'http://localhost:4200'})); // Allow requests from this origin
+app.use(express.json()); // Add this middleware to parse JSON bodies
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve static files from uploads directory
 
 async function query(filename) {
   const data = fs.readFileSync(filename);
@@ -56,10 +66,18 @@ const extractAudio = videoFile => {
   return new Promise((resolve, reject) => {
     const outputStream = fs.createWriteStream(videoFile.path + '.mp3');
 
+    console.log(`Starting conversion for: ${videoFile.path}`); // Log file path
+
     ffmpeg()
       .input(videoFile.path)
       .output(outputStream)
       .outputFormat('mp3')
+      .on('start', commandLine => {
+        console.log('Spawned Ffmpeg with command: ' + commandLine); // Log the command being run
+      })
+      .on('progress', progress => {
+        console.log(`Processing: ${progress.percent}% done`); // Log progress
+      })
       .on('end', () => {
         console.log('Conversion finished!');
         resolve(videoFile.path + '.mp3');
@@ -72,23 +90,34 @@ const extractAudio = videoFile => {
   });
 };
 
-app.post('/mp4tomp3', upload.single('video'), async (req, res) => {
+app.post('/upload-video', upload.single('video'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send({message: 'No video file uploaded'});
+  }
+
+  const videoPath = req.file.path;
+  res.send({videoPath});
+});
+
+app.post('/mp4tomp3', async (req, res) => {
   try {
-    const video = req.file;
+    const {videoPath} = req.body;
 
-    if (!video) {
-      console.error('No video file uploaded');
-      return res.status(400).send({message: 'No video file uploaded'});
+    if (!videoPath || !videoPath.endsWith('.mp4')) {
+      console.error('Invalid file format. Please upload MP4 videos.');
+      return res.status(400).send({message: 'Invalid file format. Please upload MP4 videos.'});
     }
 
-    if (!video.mimetype.startsWith('video/')) {
-      console.error('Invalid file type. Please upload an MP4 video.');
-      return res.status(400).send({message: 'Invalid file type. Please upload an MP4 video.'});
+    console.log(`Received request to convert video: ${videoPath}`); // Log the received request
+
+    if (!fs.existsSync(videoPath)) {
+      console.error('File does not exist:', videoPath);
+      return res.status(400).send({message: 'File does not exist'});
     }
 
-    const audioFilePath = await extractAudio(video);
+    const audioFilePath = await extractAudio({path: videoPath});
 
-    console.log(`Audio file path: ${audioFilePath}`);
+    console.log(`Audio file path: ${audioFilePath}`); // Log the audio file path
 
     res.download(audioFilePath, err => {
       if (err) {
@@ -108,10 +137,6 @@ app.post('/overlay-video', upload.fields([{name: 'mainVideo'}, {name: 'overlayVi
   const mainVideoPath = req.files.mainVideo[0].path;
   const overlayVideoPath = req.files.overlayVideo[0].path;
   const outputVideoPath = path.join(__dirname, 'uploads', 'output_video.mp4');
-
-  console.log(`Main video path: ${mainVideoPath}`);
-  console.log(`Overlay video path: ${overlayVideoPath}`);
-  console.log(`Output video path: ${outputVideoPath}`);
 
   ffmpeg(mainVideoPath)
     .addInput(overlayVideoPath)

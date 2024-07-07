@@ -2,7 +2,6 @@
 
 :host {
   background-color: white;
-
   position: relative;
   aspect-ratio: 1;
 
@@ -15,12 +14,17 @@
   }
 }
 
-app-skeleton-pose-viewer {
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-
 video {
   display: block;
+  width: 100%;
+}
+
+#overlayVideo {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 150px; /* Adjust as needed */
+  height: auto;
+  z-index: 1000; /* Ensure it is above other elements */
+  pointer-events: none; /* Ensure the overlay video doesn't interfere with clicks on the main video */
 }
