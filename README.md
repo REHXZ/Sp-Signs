@@ -11,7 +11,7 @@ Welcome to our repository!!! This repository will show you our prototype turning
 
 3. Click on the "Clone Repository" button.
 
-4. In the repository URL input field, enter https://github.com/REHXZ/SPSigns.
+4. In the repository URL input field, enter https://github.com/REHXZ/Sp-Signs.
 
 5. Choose a local directory where you want to clone the repository.
 
