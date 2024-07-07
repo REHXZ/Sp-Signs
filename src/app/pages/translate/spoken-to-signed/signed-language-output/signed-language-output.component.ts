@@ -25,7 +25,7 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
   videoUrl: string;
   safeVideoUrl: SafeUrl;
   isSharingSupported: boolean;
-  private ngUnsubscribe: Subject<void> = new Subject<void>();
+  // private ngUnsubscribe: Subject<void> = new Subject<void>();
   private overlayInProgress: boolean = false;
 
   @Input() originalVideoFile: File | null = null;
@@ -47,16 +47,16 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
           if (url && !this.overlayInProgress) {
             this.downloadSkeletonVideo(url);
           }
-        }),
-        takeUntil(this.ngUnsubscribe)
+        })
+        // takeUntil(this.ngUnsubscribe)
       )
       .subscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.originalVideoFile && changes.originalVideoFile.currentValue && !this.overlayInProgress) {
-      this.triggerDownload();
-    }
+    // if (changes.originalVideoFile && changes.originalVideoFile.currentValue && !this.overlayInProgress) {
+    //   this.triggerDownload();
+    // }
   }
 
   downloadSkeletonVideo(url: string): void {
@@ -71,22 +71,23 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
   }
 
   triggerDownload(): void {
-    if (this.overlayInProgress) {
-      return;
-    }
-    this.overlayInProgress = true;
-
-    fetch(this.videoUrl)
-      .then(response => response.blob())
-      .then(blob => {
-        const file = new File([blob], 'signLanguage.mp4', {type: 'video/mp4'});
-        this.signLanguageVideoReady.emit(file);
-        this.uploadSignLanguageVideo(file);
-      })
-      .catch(error => {
-        console.error('Error downloading skeleton video:', error);
-        this.overlayInProgress = false;
-      });
+    // if (this.overlayInProgress) {
+    //   return;
+    // }
+    // this.overlayInProgress = true;
+    // console.log(`Trying to download skeleton...`)
+    // fetch(this.videoUrl)
+    //   .then(response => response.blob())
+    //   .then(blob => {
+    //     console.log(`Downloaded Skeleton! URL is ${this.videoUrl}`)
+    //     const file = new File([blob], 'signLanguage.mp4', {type: 'video/mp4'});
+    //     this.signLanguageVideoReady.emit(file);
+    //     this.uploadSignLanguageVideo(file);
+    //   })
+    //   .catch(error => {
+    //     console.error('Error downloading skeleton video:', error);
+    //     // this.overlayInProgress = false;
+    //   });
   }
 
   uploadSignLanguageVideo(file: File): void {
@@ -97,7 +98,7 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
       formData.append('mainVideo', this.originalVideoFile);
     } else {
       console.error('Original video file is not available');
-      this.overlayInProgress = false;
+      // this.overlayInProgress = true; //changed this to prevent loop, but pose viewer is still looping
       return;
     }
 
@@ -105,11 +106,11 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
       next: blob => {
         console.log('Overlay successful', blob);
         this.downloadFile(blob, 'overlayed_video.mp4');
-        this.overlayInProgress = false;
+        // this.overlayInProgress = false;
       },
       error: err => {
         console.error('Error overlaying videos:', err);
-        this.overlayInProgress = false;
+        // this.overlayInProgress = false;
       },
     });
   }
@@ -151,8 +152,8 @@ export class SignedLanguageOutputComponent implements OnInit, OnChanges {
     video.src = this.videoUrl;
   }
 
-  ngOnDestroy(): void {
-    this.ngUnsubscribe.next();
-    this.ngUnsubscribe.complete();
-  }
+  // ngOnDestroy(): void {
+  //   this.ngUnsubscribe.next();
+  //   this.ngUnsubscribe.complete();
+  // }
 }

@@ -180,8 +180,8 @@ app.post('/overlay-video', upload.fields([{name: 'mainVideo'}, {name: 'overlayVi
       {
         filter: 'overlay',
         options: {
-          x: 'main_w-overlay_w-10',
-          y: 'main_h-overlay_h-10',
+          x: '(W-w)-10', // W represents main video width, w represents overlay video width
+          y: '(H-h)-10', // H represents main video height, h represents overlay video height
         },
       },
     ])

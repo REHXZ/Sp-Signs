@@ -1,4 +1,14 @@
-import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetectorRef} from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  AfterViewInit,
+  ViewChild,
+  ElementRef,
+  ChangeDetectorRef,
+} from '@angular/core';
 import {FormControl} from '@angular/forms';
 import {debounce, distinctUntilChanged, skipWhile, takeUntil, tap} from 'rxjs/operators';
 import {interval, Observable} from 'rxjs';
@@ -29,6 +39,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   spokenLanguage: string = '';
 
   @Input() isMobile = false;
+  @Output() videoFileSelected = new EventEmitter<File>();
 
   @ViewChild('originalVideo') originalVideo!: ElementRef<HTMLVideoElement>;
   @ViewChild('signedLanguageOutput') signedLanguageOutput!: ElementRef<any>;
@@ -128,10 +139,12 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   }
 
   handleFileInput(event: Event): void {
+    console.log(`Uploaded File detected and handled.`);
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
       this.originalVideoFile = file;
+      this.videoFileSelected.emit(file);
       this.originalVideo.nativeElement.src = URL.createObjectURL(file);
       this.cdr.detectChanges(); // Manually trigger change detection
       this.uploadVideo(file); // Ensure the video is uploaded for further processing
@@ -139,6 +152,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   }
 
   uploadVideo(file: File): void {
+    console.log(`Uploaded File is sending API call to download it...`);
     const formData = new FormData();
     formData.append('video', file);
 
@@ -219,18 +233,17 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   }
 
   private overlayAndDisplay() {
-    console.log('overlayAndDisplay called');
-    const formData = new FormData();
-    formData.append('mainVideo', this.originalVideoFile as File);
-    formData.append('overlayVideo', new File([this.signLanguageVideoPath], 'signLanguage.mp4'));
-
-    this.convertService.overlayVideos(formData).subscribe({
-      next: blob => {
-        console.log('Overlay successful', blob);
-        this.downloadFile(blob, 'overlayed_video.mp4');
-      },
-      error: err => console.error('Error overlaying videos:', err),
-    });
+    // console.log('overlayAndDisplay called');
+    // const formData = new FormData();
+    // formData.append('mainVideo', this.originalVideoFile as File);
+    // formData.append('overlayVideo', new File([this.signLanguageVideoPath], 'signLanguage.mp4'));
+    // this.convertService.overlayVideos(formData).subscribe({
+    //   next: blob => {
+    //     console.log('Overlay successful', blob);
+    //     this.downloadFile(blob, 'overlayed_video.mp4');
+    //   },
+    //   error: err => console.error('Error overlaying videos:', err),
+    // });
   }
 
   private downloadFile(blob: Blob, filename: string) {
