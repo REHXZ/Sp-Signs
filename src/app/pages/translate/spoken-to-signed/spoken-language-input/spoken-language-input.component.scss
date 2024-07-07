@@ -2,7 +2,11 @@
   position: relative;
   height: 100%;
   padding: 20px 24px;
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 100vh;
+  overflow: hidden;
 
   > .actions-row {
     display: flex;
@@ -11,7 +15,6 @@
   > #suggestions {
     position: absolute;
     bottom: 60px;
-
     width: 100%;
     left: 0;
     right: 0;
@@ -57,10 +60,33 @@ ion-textarea#mobile {
   &.sc-ion-textarea-ios-h {
     /* Address strange height on iOS */
     min-height: initial;
-
     background-color: white;
     @media (prefers-color-scheme: dark) {
       background-color: #202124;
     }
   }
+}
+
+#originalVideo {
+  width: auto;
+  max-height: 60vh; /* Adjust the max-height as needed */
+  flex: 1 1 auto; /* Allow it to grow and shrink */
+}
+
+#overlayVideo {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 150px; /* Adjust as needed */
+  height: auto;
+  z-index: 10;
+}
+
+.extracted-audio {
+  margin-top: 10px;
+  max-height: 20vh; /* Adjust the max-height as needed */
+  overflow-y: auto;
+  width: 100%; /* Ensure it takes the full width available */
+  flex: 1 1 auto; /* Allow it to grow and shrink */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }

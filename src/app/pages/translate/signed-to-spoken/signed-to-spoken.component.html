@@ -1,11 +1,20 @@
-@if (inputMode$ | async; as inputMode) { @switch (inputMode) { @case ('upload') { @if (videoState$ | async; as
-videoState) { @if (!videoState.src) {
-<app-upload />
-} @else {
-<ng-container *ngTemplateOutlet="translationTemplate"></ng-container>
-} } } @case ('webcam') {
-<ng-container *ngTemplateOutlet="translationTemplate"></ng-container>
-} } }
+<ng-container *ngIf="inputMode$ | async as inputMode">
+  <ng-container [ngSwitch]="inputMode">
+    <ng-container *ngSwitchCase="'upload'">
+      <ng-container *ngIf="videoState$ | async as videoState">
+        <ng-container *ngIf="!videoState.src">
+          <app-upload></app-upload>
+        </ng-container>
+        <ng-container *ngIf="videoState.src">
+          <ng-container *ngTemplateOutlet="translationTemplate"></ng-container>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+    <ng-container *ngSwitchCase="'webcam'">
+      <ng-container *ngTemplateOutlet="translationTemplate"></ng-container>
+    </ng-container>
+  </ng-container>
+</ng-container>
 
 <ng-template #translationTemplate>
   <div class="interface">
@@ -13,30 +22,30 @@ videoState) { @if (!videoState.src) {
       <app-video [displayControls]="false" [displayFps]="false"></app-video>
     </div>
 
-    <app-sign-writing />
+    <app-sign-writing></app-sign-writing>
 
-    @if (spokenLanguageText$ | async; as translation) {
-    <div class="translation-text">
-      <div>{{ translation }}</div>
+    <ng-container *ngIf="spokenLanguageText$ | async as translation">
+      <div class="translation-text">
+        <div>{{ translation }}</div>
 
-      @if (translation !== '') {
-      <div>
-        <app-text-to-speech [lang]="spokenLanguage$ | async" [text]="translation"></app-text-to-speech>
+        <ng-container *ngIf="translation !== ''">
+          <div>
+            <app-text-to-speech [lang]="spokenLanguage$ | async" [text]="translation"></app-text-to-speech>
 
-        <ion-button
-          class="circle-icon"
-          fill="clear"
-          shape="round"
-          color="dark"
-          (click)="copyTranslation()"
-          [attr.aria-label]="'translate.signed-to-spoken.actions.copy' | transloco"
-          [matTooltip]="'translate.signed-to-spoken.actions.copy' | transloco"
-          [matTooltipPosition]="'above'">
-          <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
-        </ion-button>
+            <ion-button
+              class="circle-icon"
+              fill="clear"
+              shape="round"
+              color="dark"
+              (click)="copyTranslation()"
+              [attr.aria-label]="'translate.signed-to-spoken.actions.copy' | transloco"
+              [matTooltip]="'translate.signed-to-spoken.actions.copy' | transloco"
+              [matTooltipPosition]="'above'">
+              <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ng-container>
       </div>
-      }
-    </div>
-    }
+    </ng-container>
   </div>
 </ng-template>
