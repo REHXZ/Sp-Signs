@@ -10,10 +10,10 @@
 
   <!-- Video display for the original video with overlay -->
   <div style="position: relative; width: 100%">
-    <video #originalVideo controls id="originalVideo" class="original-video">
+    <video #originalVideo controls id="originalVideo" class="original-video" hidden>
       Your browser does not support the video tag.
     </video>
-    <video #overlayVideo autoplay loop muted playsinline id="overlayVideo" class="overlay-video"></video>
+    <video #overlayVideo autoplay loop muted playsinline id="overlayVideo" class="overlay-video hidden" hidden></video>
   </div>
 
   <div class="extracted-audio">
