@@ -22,6 +22,8 @@ export class ConvertService {
   }
 
   overlayVideos(formData: FormData): Observable<Blob> {
-    return this.http.post<Blob>('http://localhost:5000/overlay-video', formData);
+    return this.http.post<Blob>('http://localhost:5000/overlay-video', formData, {
+      responseType: 'blob' as 'json',
+    });
   }
 }
