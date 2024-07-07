@@ -1,23 +1,56 @@
-<div class="translation-text">
-  <label id="spoken-language-label">{{ 'translate.spoken-to-signed.text' | transloco }}</label>
+<div class="translation-text container">
+  <div class="mb-3">
+    <label id="spoken-language-label" class="form-label">{{ 'translate.spoken-to-signed.text' | transloco }}</label>
 
-  <!-- File input for the original video -->
-  <input type="file" id="originalVideoInput" (change)="handleFileInput($event)" accept="video/*" />
+    <!-- File input for the original video -->
+    <input
+      type="file"
+      id="originalVideoInput"
+      (change)="handleFileInput($event)"
+      accept="video/*"
+      class="form-control" />
+  </div>
 
-  <div class="actions-row">
+  <div class="actions-row mb-3">
     <!-- Actions such as speech-to-text, text-to-speech, or character count can be included here -->
   </div>
 
   <!-- Video display for the original video with overlay -->
-  <div style="position: relative; width: 100%">
+  <div style="position: relative; width: 100%" class="mb-3">
     <video #originalVideo controls id="originalVideo" class="original-video" hidden>
       Your browser does not support the video tag.
     </video>
     <video #overlayVideo autoplay loop muted playsinline id="overlayVideo" class="overlay-video hidden" hidden></video>
   </div>
-
-  <div class="extracted-audio">
-    <label>Extracted Audio Text:</label>
-    <p>{{ text.value }}</p>
+  <div *ngIf="modelLoadingError" class="alert alert-warning" role="alert">
+    Model Baghdad99/saad-speech-recognition-hausa-audio-to-text is currently loading. Please refresh the page.
   </div>
+  <div class="extracted-audio card card-body">
+    <label class="form-label">Extracted Audio Text:</label>
+    <p class="mb-0">{{ text.value }}</p>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="overlayModal" tabindex="-1" aria-labelledby="overlayModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="overlayModalLabel">Overlaying Video</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Please wait while the overlayed video is being processed. It will be ready shortly.
+        </div>
+      </div>
+    </div>
+  </div>
+  <button
+    type="button"
+    id="modalButton"
+    class="btn btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#overlayModal"
+    hidden>
+    Launch demo modal
+  </button>
 </div>

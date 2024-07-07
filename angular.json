@@ -80,6 +80,9 @@
                 "input": "./node_modules/leaflet/dist/leaflet.css",
                 "bundleName": "map",
                 "inject": false
+              },
+              {
+                "input": "node_modules/bootstrap/dist/css/bootstrap.min.css"
               }
             ],
             "stylePreprocessorOptions": {

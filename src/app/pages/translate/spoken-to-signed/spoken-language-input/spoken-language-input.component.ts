@@ -37,12 +37,15 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   maxTextLength = 500;
   detectedLanguage: string = '';
   spokenLanguage: string = '';
+  modelLoadingError: boolean = false;
+  estimatedTime: number = 0;
 
   @Input() isMobile = false;
   @Output() videoFileSelected = new EventEmitter<File>();
 
   @ViewChild('originalVideo') originalVideo!: ElementRef<HTMLVideoElement>;
   @ViewChild('signedLanguageOutput') signedLanguageOutput!: ElementRef<any>;
+  @ViewChild('modalButton') modalButton!: ElementRef<HTMLButtonElement>;
 
   private originalVideoFile: File | null = null;
   private signLanguageVideoPath: File | null = null;
@@ -145,9 +148,8 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
       const file = input.files[0];
       this.originalVideoFile = file;
       this.videoFileSelected.emit(file);
-      this.originalVideo.nativeElement.src = URL.createObjectURL(file);
-      this.cdr.detectChanges(); // Manually trigger change detection
       this.uploadVideo(file); // Ensure the video is uploaded for further processing
+      this.modalButton.nativeElement.click();
     }
   }
 
@@ -160,7 +162,6 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
       next: response => {
         console.log('Video uploaded successfully:', response.videoPath);
         if (response.videoPath.endsWith('.mp4')) {
-          this.displayVideo(response.videoPath); // Display video before processing
           this.processVideo(response.videoPath);
         } else {
           console.error('Uploaded file is not in MP4 format:', response.videoPath);
@@ -172,14 +173,6 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     });
   }
 
-  displayVideo(videoPath: string): void {
-    const videoUrl = `http://localhost:5000${videoPath}`; // Update this line to use the correct video URL
-    console.log('Video URL:', videoUrl);
-    this.originalVideo.nativeElement.src = videoUrl;
-    this.originalVideo.nativeElement.load();
-    this.originalVideo.nativeElement.play().catch(error => console.error('Error playing video:', error));
-  }
-
   processVideo(videoPath: string): void {
     if (videoPath.endsWith('.mp4')) {
       this.convertService.convertMp4ToMp3({videoPath}).subscribe({
@@ -188,6 +181,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
           this.convertService.getTextFromMp3(mp3Blob).subscribe({
             next: data => {
               console.log('Text extraction successful', data);
+
               let fileContent = '';
               if (typeof data.text === 'string') {
                 fileContent = data.text;
@@ -195,6 +189,8 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
                 fileContent = data.text.text;
               } else {
                 console.error('Unexpected response format:', data);
+                this.modelLoadingError = true;
+                this.estimatedTime = data.estimated_time;
               }
 
               if (typeof fileContent === 'string') {
@@ -205,7 +201,16 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
                 console.error('Expected fileContent to be a string, but got:', typeof fileContent);
               }
             },
-            error: err => console.error('Error converting MP3 to text:', err),
+            error: err => {
+              console.error('Error converting MP3 to text:', err);
+              if (
+                err.error &&
+                err.error === 'Model Baghdad99/saad-speech-recognition-hausa-audio-to-text is currently loading'
+              ) {
+                this.modelLoadingError = true;
+                this.estimatedTime = err.estimated_time;
+              }
+            },
           });
         },
         error: err => console.error('Error converting MP4 to MP3:', err),
@@ -233,17 +238,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   }
 
   private overlayAndDisplay() {
-    // console.log('overlayAndDisplay called');
-    // const formData = new FormData();
-    // formData.append('mainVideo', this.originalVideoFile as File);
-    // formData.append('overlayVideo', new File([this.signLanguageVideoPath], 'signLanguage.mp4'));
-    // this.convertService.overlayVideos(formData).subscribe({
-    //   next: blob => {
-    //     console.log('Overlay successful', blob);
-    //     this.downloadFile(blob, 'overlayed_video.mp4');
-    //   },
-    //   error: err => console.error('Error overlaying videos:', err),
-    // });
+    // Implementation removed as per request
   }
 
   private downloadFile(blob: Blob, filename: string) {
