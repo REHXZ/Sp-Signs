@@ -177,14 +177,28 @@ app.post('/overlay-video', upload.fields([{name: 'mainVideo'}, {name: 'overlayVi
   ffmpeg(mainVideoPath)
     .addInput(overlayVideoPath)
     .complexFilter([
+      // Scale the overlay video to 20% of the main video size
+      {
+        filter: 'scale',
+        options: {
+          w: 'iw*0.35',
+          h: 'ih*0.35',
+        },
+        inputs: '[1]',
+        outputs: '[scaledOverlay]',
+      },
+      // Overlay the scaled video onto the main video
       {
         filter: 'overlay',
         options: {
-          x: '(W-w)-10', // W represents main video width, w represents overlay video width
-          y: '(H-h)-10', // H represents main video height, h represents overlay video height
+          x: 'main_w-overlay_w-10',
+          y: 'main_h-overlay_h-10',
         },
+        inputs: '[0][scaledOverlay]',
+        outputs: '[out]',
       },
     ])
+    .outputOptions('-map', '[out]')
     .on('end', () => {
       res.download(outputVideoPath, err => {
         if (err) {
