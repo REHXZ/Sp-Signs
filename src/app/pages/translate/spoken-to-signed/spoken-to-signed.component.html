@@ -1,3 +1,7 @@
 <app-spoken-language-input />
+<div>
+  <input type="file" (change)="handleFileInput($event)" accept="video/*" />
+  <app-signed-language-output [originalVideoFile]="originalVideoFile"></app-signed-language-output>
+</div>
 
 <app-signed-language-output />
