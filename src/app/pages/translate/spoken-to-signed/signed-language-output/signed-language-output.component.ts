@@ -1,5 +1,5 @@
-import {Component, OnInit} from '@angular/core';
-import {Observable} from 'rxjs';
+import {Component, OnInit, EventEmitter, Output, Input} from '@angular/core';
+import {Observable, Subject} from 'rxjs';
 import {PoseViewerSetting} from '../../../../modules/settings/settings.state';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {Store} from '@ngxs/store';
@@ -9,16 +9,15 @@ import {
   DownloadSignedLanguageVideo,
   ShareSignedLanguageVideo,
 } from '../../../../modules/translate/translate.actions';
-import {BaseComponent} from '../../../../components/base/base.component';
 import {Capacitor} from '@capacitor/core';
-import {getMediaSourceClass} from '../../pose-viewers/playable-video-encoder';
+import {HttpClient} from '@angular/common/http';
 
 @Component({
   selector: 'app-signed-language-output',
   templateUrl: './signed-language-output.component.html',
   styleUrls: ['./signed-language-output.component.scss'],
 })
-export class SignedLanguageOutputComponent extends BaseComponent implements OnInit {
+export class SignedLanguageOutputComponent implements OnInit {
   poseViewerSetting$!: Observable<PoseViewerSetting>;
   pose$!: Observable<string>;
   video$!: Observable<string>;
@@ -26,14 +25,15 @@ export class SignedLanguageOutputComponent extends BaseComponent implements OnIn
   videoUrl: string;
   safeVideoUrl: SafeUrl;
   isSharingSupported: boolean;
+  private ngUnsubscribe: Subject<void> = new Subject<void>();
 
-  constructor(private store: Store, private domSanitizer: DomSanitizer) {
-    super();
+  @Input() originalVideoFile: File | null = null;
+  @Output() signLanguageVideoReady = new EventEmitter<File>();
 
+  constructor(private store: Store, private domSanitizer: DomSanitizer, private http: HttpClient) {
     this.poseViewerSetting$ = this.store.select<PoseViewerSetting>(state => state.settings.poseViewer);
     this.pose$ = this.store.select<string>(state => state.translate.signedLanguagePose);
     this.video$ = this.store.select<string>(state => state.translate.signedLanguageVideo);
-
     this.isSharingSupported = Capacitor.isNativePlatform() || ('navigator' in globalThis && 'share' in navigator);
   }
 
@@ -43,19 +43,69 @@ export class SignedLanguageOutputComponent extends BaseComponent implements OnIn
         tap(url => {
           this.videoUrl = url;
           this.safeVideoUrl = url ? this.domSanitizer.bypassSecurityTrustUrl(url) : null;
+          if (url) {
+            this.downloadSkeletonVideo(url);
+          }
         }),
         takeUntil(this.ngUnsubscribe)
       )
       .subscribe();
   }
 
+  downloadSkeletonVideo(url: string): void {
+    fetch(url)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], 'signLanguage.mp4', {type: 'video/mp4'});
+        this.signLanguageVideoReady.emit(file);
+
+        // Upload the downloaded video to the backend for overlay processing
+        this.uploadSignLanguageVideo(file);
+      })
+      .catch(error => console.error('Error downloading skeleton video:', error));
+  }
+
   triggerDownload(): void {
-    const link = document.createElement('a');
-    link.href = this.videoUrl;
-    link.setAttribute('download', 'video.mp4');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    fetch(this.videoUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], 'signLanguage.mp4', {type: 'video/mp4'});
+        this.signLanguageVideoReady.emit(file);
+
+        // Upload the downloaded video to the backend for overlay processing
+        this.uploadSignLanguageVideo(file);
+      })
+      .catch(error => console.error('Error downloading skeleton video:', error));
+  }
+
+  uploadSignLanguageVideo(file: File): void {
+    const formData = new FormData();
+    formData.append('overlayVideo', file);
+
+    // Assuming the original video file is already available as this.originalVideoFile
+    if (this.originalVideoFile) {
+      formData.append('mainVideo', this.originalVideoFile);
+    } else {
+      console.error('Original video file is not available');
+      return;
+    }
+
+    this.http.post('http://localhost:5000/overlay-video', formData, {responseType: 'blob'}).subscribe({
+      next: blob => {
+        console.log('Overlay successful', blob);
+        this.downloadFile(blob, 'overlayed_video.mp4');
+      },
+      error: err => console.error('Error overlaying videos:', err),
+    });
+  }
+
+  private downloadFile(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   copyTranslation(): void {
@@ -77,41 +127,17 @@ export class SignedLanguageOutputComponent extends BaseComponent implements OnIn
     }
   }
 
-  async createVideoMediaSource() {
-    const res = await fetch(this.videoUrl);
-    const blob = await res.blob();
-
-    const mediaSourceClass = getMediaSourceClass();
-    if (!mediaSourceClass) {
-      return null;
-    }
-
-    const mediaSource = new mediaSourceClass();
-    mediaSource.addEventListener('sourceopen', async () => {
-      const sourceBuffer = mediaSource.addSourceBuffer(blob.type);
-      sourceBuffer.addEventListener('updateend', () => {
-        if (!sourceBuffer.updating && mediaSource.readyState === 'open') {
-          mediaSource.endOfStream();
-        }
-      });
-      sourceBuffer.appendBuffer(await blob.arrayBuffer());
-    });
-
-    return mediaSource;
-  }
-
   async onVideoError(event: ErrorEvent) {
-    // https://github.com/sign/translate/issues/127
     if (this.safeVideoUrl === null) {
       return;
     }
 
     const video = event.target as HTMLVideoElement;
-    if (!video.srcObject) {
-      // Fallback behavior to make sure the browser can play the video
-      this.safeVideoUrl = null;
-      video.disableRemotePlayback = true; // Disable AirPlay, must be used for ManagedMediaSource
-      video.srcObject = await this.createVideoMediaSource();
-    }
+    video.src = this.videoUrl;
+  }
+
+  ngOnDestroy(): void {
+    this.ngUnsubscribe.next();
+    this.ngUnsubscribe.complete();
   }
 }

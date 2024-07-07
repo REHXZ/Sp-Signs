@@ -20,6 +20,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage: storage});
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 ffmpeg.setFfmpegPath('ffmpeg/bin/ffmpeg.exe'); // Adjust the path as necessary for your installation
 
 app.use(cors({origin: 'http://localhost:4200'})); // Allow requests from this origin
@@ -32,12 +34,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 async function query(filename) {
   const data = fs.readFileSync(filename);
-  const fetch = (await import('node-fetch')).default; // Dynamic import of node-fetch
+  const fetch = (await import('node-fetch')).default;
   const response = await fetch(
     'https://api-inference.huggingface.co/models/Baghdad99/saad-speech-recognition-hausa-audio-to-text',
     {
@@ -140,6 +139,29 @@ app.post('/mp4tomp3', async (req, res) => {
   } catch (error) {
     console.error('Error extracting audio:', error);
     res.status(500).send({message: 'Error extracting audio'});
+  }
+});
+
+app.get('/download-video', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl) {
+      return res.status(400).send({message: 'No video URL provided'});
+    }
+
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch video: ${response.statusText}`);
+    }
+
+    const buffer = await response.buffer();
+    const filePath = path.join(__dirname, 'uploads', 'signLanguage.mp4');
+    fs.writeFileSync(filePath, buffer);
+
+    res.json({filePath: filePath});
+  } catch (error) {
+    console.error('Error fetching video:', error);
+    res.status(500).send({message: 'Error fetching video', error: error.message});
   }
 });
 

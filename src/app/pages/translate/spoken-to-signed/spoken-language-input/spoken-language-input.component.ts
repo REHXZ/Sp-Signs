@@ -31,9 +31,10 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   @Input() isMobile = false;
 
   @ViewChild('originalVideo') originalVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild('signedLanguageOutput') signedLanguageOutput!: ElementRef<any>;
 
   private originalVideoFile: File | null = null;
-  private signLanguageVideoBlob: Blob | null = null;
+  private signLanguageVideoPath: File | null = null;
 
   constructor(
     private store: Store,
@@ -113,6 +114,9 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
 
   ngAfterViewInit() {
     // Ensure ViewChild elements are set
+    this.signedLanguageOutput.nativeElement.signLanguageVideoReady.subscribe((file: File) => {
+      this.handleSignLanguageVideo(file);
+    });
   }
 
   setText(text: string) {
@@ -186,10 +190,6 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
               } else {
                 console.error('Expected fileContent to be a string, but got:', typeof fileContent);
               }
-
-              // Simulate receiving the sign language video blob and calling handleSignLanguageVideo
-              const signLanguageVideoBlob = new Blob(); // Replace this with actual Blob data
-              this.handleSignLanguageVideo(signLanguageVideoBlob);
             },
             error: err => console.error('Error converting MP3 to text:', err),
           });
@@ -201,24 +201,19 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     }
   }
 
-  handleSignLanguageVideo(videoBlob: Blob) {
-    console.log('handleSignLanguageVideo called with Blob:', videoBlob);
-    if (videoBlob instanceof Blob) {
-      console.log('Blob size:', videoBlob.size); // Log Blob size
-      if (videoBlob.size > 0) {
-        this.signLanguageVideoBlob = videoBlob;
-        this.tryOverlayAndDisplay();
-      } else {
-        console.error('Blob is empty.');
-      }
+  handleSignLanguageVideo(file: File) {
+    console.log('handleSignLanguageVideo called with File:', file);
+    if (file instanceof File) {
+      this.signLanguageVideoPath = file;
+      this.tryOverlayAndDisplay();
     } else {
-      console.error('Expected a Blob for sign language video, but got:', videoBlob);
+      console.error('Expected a File for sign language video, but got:', file);
     }
   }
 
   private tryOverlayAndDisplay() {
     console.log('tryOverlayAndDisplay called');
-    if (this.signLanguageVideoBlob && this.originalVideoFile) {
+    if (this.signLanguageVideoPath && this.originalVideoFile) {
       this.overlayAndDisplay();
     }
   }
@@ -227,7 +222,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     console.log('overlayAndDisplay called');
     const formData = new FormData();
     formData.append('mainVideo', this.originalVideoFile as File);
-    formData.append('overlayVideo', this.signLanguageVideoBlob, 'signLanguage.mp4');
+    formData.append('overlayVideo', new File([this.signLanguageVideoPath], 'signLanguage.mp4'));
 
     this.convertService.overlayVideos(formData).subscribe({
       next: blob => {
@@ -249,7 +244,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   }
 
   ngOnChanges() {
-    if (this.originalVideoFile && this.signLanguageVideoBlob) {
+    if (this.originalVideoFile && this.signLanguageVideoPath) {
       this.overlayAndDisplay();
     }
   }
