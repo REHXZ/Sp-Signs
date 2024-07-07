@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef} from '@angular/core';
+import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetectorRef} from '@angular/core';
 import {FormControl} from '@angular/forms';
 import {debounce, distinctUntilChanged, skipWhile, takeUntil, tap} from 'rxjs/operators';
 import {interval, Observable} from 'rxjs';
@@ -35,7 +35,12 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   private originalVideoFile: File | null = null;
   private signLanguageVideoBlob: Blob | null = null;
 
-  constructor(private store: Store, private convertService: ConvertService, private http: HttpClient) {
+  constructor(
+    private store: Store,
+    private convertService: ConvertService,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
+  ) {
     super();
     this.translate$ = this.store.select<TranslateStateModel>(state => state.translate);
     this.text$ = this.store.select<string>(state => state.translate.spokenLanguageText);
@@ -82,7 +87,7 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
         debounce(() => interval(1000)),
         distinctUntilChanged((a, b) => {
           const trimmedA = typeof a === 'string' ? a.trim() : '';
-          const trimmedB = typeof b === 'string' ? a.trim() : '';
+          const trimmedB = typeof b === 'string' ? b.trim() : '';
           return trimmedA === trimmedB;
         }),
         tap(text => {
@@ -123,7 +128,9 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
       this.originalVideoFile = file;
-      this.uploadVideo(file);
+      this.originalVideo.nativeElement.src = URL.createObjectURL(file);
+      this.cdr.detectChanges(); // Manually trigger change detection
+      this.uploadVideo(file); // Ensure the video is uploaded for further processing
     }
   }
 
@@ -134,25 +141,12 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     this.http.post<{videoPath: string}>('http://localhost:5000/upload-video', formData).subscribe({
       next: response => {
         console.log('Video uploaded successfully:', response.videoPath);
-        if (response.videoPath.endsWith('.mp4')) {
-          this.displayVideo(response.videoPath); // Display video before processing
-          this.processVideo(response.videoPath);
-        } else {
-          console.error('Uploaded file is not in MP4 format:', response.videoPath);
-        }
+        this.processVideo(response.videoPath);
       },
       error: err => {
         console.error('Error uploading video:', err);
       },
     });
-  }
-
-  displayVideo(videoPath: string): void {
-    const videoUrl = `http://localhost:5000/${videoPath.replace(/\\/g, '/')}`; // Handle Windows backslashes
-    console.log('Video URL:', videoUrl);
-    this.originalVideo.nativeElement.src = videoUrl;
-    this.originalVideo.nativeElement.load();
-    this.originalVideo.nativeElement.play().catch(error => console.error('Error playing video:', error));
   }
 
   processVideo(videoPath: string): void {
@@ -193,18 +187,19 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
   handleSignLanguageVideo(videoBlob: Blob) {
     if (videoBlob instanceof Blob) {
       this.signLanguageVideoBlob = videoBlob;
-      this.overlayAndDisplay();
+      this.tryOverlayAndDisplay();
     } else {
       console.error('Expected a Blob for sign language video, but got:', videoBlob);
     }
   }
 
-  overlayAndDisplay() {
-    if (!this.signLanguageVideoBlob || !this.originalVideoFile) {
-      console.error('signLanguageVideoBlob or originalVideoFile is not set or is not a Blob');
-      return;
+  private tryOverlayAndDisplay() {
+    if (this.signLanguageVideoBlob && this.originalVideoFile) {
+      this.overlayAndDisplay();
     }
+  }
 
+  private overlayAndDisplay() {
     const formData = new FormData();
     formData.append('mainVideo', this.originalVideoFile as File);
     formData.append('overlayVideo', this.signLanguageVideoBlob, 'signLanguage.mp4');
@@ -212,11 +207,24 @@ export class SpokenLanguageInputComponent extends BaseComponent implements OnIni
     this.convertService.overlayVideos(formData).subscribe({
       next: blob => {
         console.log('Overlay successful', blob);
-        this.originalVideo.nativeElement.src = URL.createObjectURL(blob);
-        this.originalVideo.nativeElement.load();
-        this.originalVideo.nativeElement.play().catch(error => console.error('Error playing video:', error));
+        this.downloadBlob(blob, 'overlayed_video.mp4');
       },
       error: err => console.error('Error overlaying videos:', err),
     });
+  }
+
+  private downloadBlob(blob: Blob, filename: string) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  ngOnChanges() {
+    if (this.originalVideoFile && this.signLanguageVideoBlob) {
+      this.overlayAndDisplay();
+    }
   }
 }

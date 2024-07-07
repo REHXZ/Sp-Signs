@@ -25,7 +25,15 @@ ffmpeg.setFfmpegPath('ffmpeg/bin/ffmpeg.exe'); // Adjust the path as necessary f
 app.use(cors({origin: 'http://localhost:4200'})); // Allow requests from this origin
 app.use(express.json()); // Add this middleware to parse JSON bodies
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve static files from uploads directory
+// Middleware to add COOP and COEP headers
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 async function query(filename) {
   const data = fs.readFileSync(filename);
@@ -96,7 +104,7 @@ app.post('/upload-video', upload.single('video'), (req, res) => {
   }
 
   const videoPath = req.file.path;
-  res.send({videoPath});
+  res.send({videoPath: `/uploads/${path.basename(videoPath)}`});
 });
 
 app.post('/mp4tomp3', async (req, res) => {
@@ -108,14 +116,16 @@ app.post('/mp4tomp3', async (req, res) => {
       return res.status(400).send({message: 'Invalid file format. Please upload MP4 videos.'});
     }
 
-    console.log(`Received request to convert video: ${videoPath}`); // Log the received request
+    const fullPath = path.join(__dirname, videoPath);
 
-    if (!fs.existsSync(videoPath)) {
-      console.error('File does not exist:', videoPath);
+    console.log(`Received request to convert video: ${fullPath}`); // Log the received request
+
+    if (!fs.existsSync(fullPath)) {
+      console.error('File does not exist:', fullPath);
       return res.status(400).send({message: 'File does not exist'});
     }
 
-    const audioFilePath = await extractAudio({path: videoPath});
+    const audioFilePath = await extractAudio({path: fullPath});
 
     console.log(`Audio file path: ${audioFilePath}`); // Log the audio file path
 
@@ -136,7 +146,11 @@ app.post('/mp4tomp3', async (req, res) => {
 app.post('/overlay-video', upload.fields([{name: 'mainVideo'}, {name: 'overlayVideo'}]), (req, res) => {
   const mainVideoPath = req.files.mainVideo[0].path;
   const overlayVideoPath = req.files.overlayVideo[0].path;
-  const outputVideoPath = path.join(__dirname, 'uploads', 'output_video.mp4');
+  const outputVideoPath = path.join(__dirname, 'uploads', 'output_video-' + Date.now() + '.mp4');
+
+  console.log(`Main video path: ${mainVideoPath}`);
+  console.log(`Overlay video path: ${overlayVideoPath}`);
+  console.log(`Output video path: ${outputVideoPath}`);
 
   ffmpeg(mainVideoPath)
     .addInput(overlayVideoPath)
